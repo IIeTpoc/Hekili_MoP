@@ -74,7 +74,7 @@ actions.st+=/heroic_throw,if=rage>90
 ### AOE (>=2 targets) ###
 actions.aoe+=/sweeping_strikes,if=!buff.sweeping_strikes.up
 # Thunder Clap & Deep Wounds 
-actions.aoe+=/thunder_clap,if=(active_enemies==1&!dot.deep_wounds.ticking)|(active_enemies==2&cooldown.bladestorm.ready&dot.deep_wounds.remains<=2)|(active_enemies==3&(dot.deep_wounds.percent_gain>10|talent.resonating_power.enabled&dot.deep_wounds.percent_gain>0))|(active_enemies>=4&dot.deep_wounds.percent_gain>10)
+actions.aoe+=/thunder_clap,if=(active_enemies==1&!dot.deep_wounds.ticking)|(active_enemies==2&cooldown.bladestorm.ready&dot.deep_wounds.remains<=2)|(active_enemies==3&(dot.deep_wounds.percent_gain>10|glyph.resonating_power.enabled&dot.deep_wounds.percent_gain>0))|(active_enemies>=4&dot.deep_wounds.percent_gain>10)
 actions.aoe+=/colossus_smash,if=debuff.colossus_smash.remains<1&active_enemies<=6
 actions.aoe+=/mortal_strike,if=buff.sweeping_strikes.up&active_enemies<=4
 actions.aoe+=/bladestorm,if=talent.bladestorm.enabled&rage>=20
