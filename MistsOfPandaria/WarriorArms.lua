@@ -127,6 +127,15 @@ end)
 
 combatLogFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
+-- Deep-Wounds application via abilities.
+spec:RegisterCombatLogEvent( function( _, subtype, _, sourceGUID, _, _, _, dstGUID, _, _, _, spellID, _, _, _, spellSchool)
+    if sourceGUID == UnitGUID("player")
+       and (subtype == "SPELL_AURA_APPLIED" or subtype == "SPELL_AURA_REFRESH")
+       and spellID == 115768 then
+        state.debuff.deep_wounds.snapshot_ap = select(2, UnitAttackPower("player"))
+    end
+end)
+
 -- Colossus Smash debuff tracking
 RegisterCombatLogEvent("SPELL_AURA_APPLIED", function(timestamp, subevent, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool)
     if spellID == 86346 then -- Colossus Smash
@@ -616,7 +625,8 @@ spec:RegisterAuras( {
         id = 12328,
         duration = 10,
         max_stack = 1,
-    },    overpower = {
+    },    
+    overpower = {
         id = 7384,
         duration = 5,  -- WoW Sims: 5 second window to use Overpower after dodge
         max_stack = 1,
@@ -824,7 +834,7 @@ spec:RegisterAuras( {
 
     deep_wounds = {
         id = 115767,
-        duration = 12,
+        duration = 15,
         tick_time = 3,
         max_stack = 1,
         generate = function( t )
@@ -1277,7 +1287,7 @@ spec:RegisterAbilities( {
             -- Apply Mortal Strike debuff (healing reduction)
             applyDebuff( "target", "mortal_wounds", 10 )
             -- Also apply Deep Wounds debuff
-            applyDebuff( "target", "deep_wounds", 15 )
+            applyDebuff( "target", "deep_wounds" )
             -- Always add 2 stacks of Taste for Blood, max 5
             if not buff.taste_for_blood.up then
                 applyBuff( "taste_for_blood" )
