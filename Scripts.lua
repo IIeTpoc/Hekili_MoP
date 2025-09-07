@@ -475,6 +475,9 @@ do
         { "^gcd.remains$"                           , "gcd.remains"                       },
         { "^gcd.remains<?=(.+)$"                    , "gcd.remains-%1"                    },
         { "^swing.([a-z_]+).remains$"               , "swing.%1.remains"                  },
+        -- SimC alias -------  auto_time_to_next ---------------
+        { "^auto_time_to_next$"                     ,"swing.mainhand.remains"             },
+        { "^auto_time_to_next%s*([<>]=?)%s*(.+)$"   ,"swing.mainhand.remains%1%2"         },
         { "^(.-)%.deficit<=?(.-)$"                  , "0.01+%1.timeTo(%1.max-(%2))"       },
         { "^(.-)%.deficit>=?(.-)$"                  , "0.01+%1.timeTo(%1.max-(%2))"       },
         { "^target%.health%.pe?r?ce?n?t[<>=]+(.-)$" , "0.01+target['time_to_pct_' .. %1]" },
@@ -533,6 +536,8 @@ do
         { "^!?time_to_hpg$"           , "time_to_hpg"          }, -- Retribution Paladin
         { "^!?time_to_hpg[<=]=?(.-)$" , "time_to_hpg-%1"       }, -- Retribution Paladin
         { "^!?consecration.up"        , "consecration.remains" }, -- Prot        Paladin
+
+        { "%.percent_gain"            ,".percent_gain"         }, -- Arms Deep Wounds snapshot
 
         { "^!?contagion<=?(.-)"  , "contagion-%1"                 }, -- Affliction Warlock
         { "^time_to_imps%.(.+)$" , "time_to_imps[%1]"             }, -- Demo Warlock
