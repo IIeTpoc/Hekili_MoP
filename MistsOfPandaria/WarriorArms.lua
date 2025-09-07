@@ -81,6 +81,17 @@
     end
     local PTR = ns.PTR
 
+    do
+        local _applyDebuff = applyDebuff
+        applyDebuff = function( target, aura, duration, ... )
+            _applyDebuff( target, aura, duration, ... )
+            if aura == "deep_wounds" then
+                -- Store current Attack Power so dot.deep_wounds.percent_gain works.
+                state.debuff.deep_wounds.snapshot_ap = select( 2, UnitAttackPower( "player" ) )
+            end
+        end
+    end
+
     local strformat = string.format
 
     local spec = Hekili:NewSpecialization( 71 )
@@ -2295,6 +2306,25 @@ spec:RegisterOptions( {
 
 local NewFeature = "|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0|t"
 
+-- Add a UNIT_ATTACK_SPEED zero-latency handler for MoP Arms Warrior
+ spec:RegisterUnitEvent( "UNIT_ATTACK_SPEED", "player", nil, function( event, unit )
+     if unit ~= "player" then return end
+
+     local mh, oh = UnitAttackSpeed( "player" )
+     local sw      = state.swings
+     sw.mh_speed   = mh or sw.mh_speed or 0
+     sw.oh_speed   = oh or sw.oh_speed or 0
+     state.mainhand_speed = sw.mh_speed
+     state.offhand_speed  = sw.oh_speed
+
+     -- Bump projected swing timers so swing.remains is correct.
+     local now = GetTime()
+     if sw.mh_actual > 0 then sw.mh_projected = sw.mh_actual + sw.mh_speed end
+     if sw.oh_actual > 0 then sw.oh_projected = sw.oh_actual + sw.oh_speed end
+
+     -- Rage/sec scales with weapon speed; recalc.
+     if spec.RefreshResources then spec:RefreshResources() end
+ end )
 
 -- State Expressions for MoP Arms Warrior
 spec:RegisterStateExpr( "rage_deficit", function()
@@ -2442,6 +2472,22 @@ spec:RegisterStateExpr( "tank", function()
         }
     }
 end )
+
+ -- Deep-Wounds percent-gain snapshot logic.
+ spec:RegisterStateExpr( "dot.deep_wounds.percent_gain", function ()
+     local debuff   = state.debuff.deep_wounds
+     if debuff.down or not debuff.snapshot_ap then return 0 end
+
+     -- Current Attack Power * weapon-damage scaling; exact formula not critical
+     local _, currentAP = UnitAttackPower( "player" )
+     local newMult      = currentAP
+     local oldMult      = debuff.snapshot_ap
+
+     -- Safeguard vs divide-by-zero.
+     if oldMult == 0 then return 100 end
+
+     return ( newMult / oldMult - 1 ) * 100
+ end )
 
 spec:RegisterPack( "Arms", 20250827, [[Hekili:vV1EVTnYr8plgb1i(Ul6OEz7ayzG84k6f0lxqvo0)JKRixzryksw(WkUqGF27S7Yh7BsvlCPfbjWMC3zMD2z(np4e3PUF1DDiQe7(5zoZw6C7SBMmBUZ8fURlFod7Uodf8i6b4hsq7H)9D57lip854uuizVfPv5bWlCxVPkkU8xtC3OJGoZElS2mCG7NVzQ76DrHHy2sXfbUR)6UOIAFYFr1(nSS2pDl87bLrPj1(XrfLWR3MMx7)3WpgfhnbKJ80TrXa3FvTprYQ9)NO88iYAE3x(7nR(3y7KqSVGscr5rO6pbB4pYiIzyTFzkSYOVbmMS1OYNjssrfUO(t1FIX)Ijz54G09BqL)4QFg(3YySxXU0Qs9ROyhSeCEuYdEL7YtpqO0REfW03JkGd2hJkYqLb7WG4rEClnGDgSdL)a(NI2UQmApELZXJLKhuojhL8a((B5xBEvIh738iQNFICfTAF6t494KscjA)5jHWRrjb47xkWluCSkbcstJdtpKumiRWFdhuvYewMqUdJIl3njlO8UzodUFukDVKN)e2dNG3hHlUF1Sb3yrP6(wnD4JwiEloPa2uXWRTQeSXaBH2BUp0PwyxzelOcQrAdnR971C(4Os6TBe8Qq4vOeMPmzzFyDT)HOeyLWUH1CyhoH9uQdWgIvf1OCdzJzzXr4Wj92zDCHi6PXPGPAHxXEuXoIsjeVPA72jIVysoEpceL7MQNmONqWfi7EmMyVWEWeCcAtmo8YxRNQvzhp2sgtCCrNbmXE2Rm1lmcF3SLxPxs2eNMgc(q74eMUN9DqEaF6hJXffjWFnREjmwdvN7y4qIZlW5pIZ9YrmFDkrXjKFDczvVKt48JhJk8A8n9Y2biogoCHyuy8ZEG9)Eo1n3t7u4MKMljs89RU2WbTOmnFV3M04so63)WbjVbXgyk4QMNkyYY90ZGDY9xF1LI4l3TAb1P)9XiiMf5mu7xvqJt9MA)eIZmnaaG3gsIQSpnhE12C8)QceV4NnzV3snbd(2h2Dsy6zcMkicRFSkoMeljjHGX0YEiAygoh4KGGO)IHqbVnucqyCp5Pm4RqKRhXKOM)CT))afeHIz)8xsPrJ1sZQcSxujE)pveNwUQKrIPNStZSLNa5ND2iFg9K1gc9HkVS0dGdAZJBDr5HdovoqHX82wL)SnH2kIbKpXPVxuEakHiD55nPfWGzWBJcIkVF1cNUyC)cd0aUN3rZt51qu8)YvI5OmPbz5Lf9PNiGFcy27va3OpsXcVOHinV4qAvsitzR9fDWE6ioxgkdaHXJvRD)0DxurYB1dGilP7v9HJvCyCDQJw2weJ2pczE2s6pCNbQaj)LtTI7e)subesaYk2JAmcqXqQ2aDoEKsNBhshytv1kZS1Su7AGuIsJcAVRjE0q2tEpeeUIIt8A2EVDPHacel6RoEK(k(Ou8w(9mJpl9wb7ooJ91G3umyK)vQlmySNKM8MMTlBZxu(Ym3P7)CzPVqIUc3ZMXgGJ8V3Usky(xjwdnfj9EI9ae0cLaAjsjd24HvBjwekWyGVEQWksTqKKOzIfScICrYloKMYljVyilc)CwHFvLS0MHKIfLJwRSb8lmSR2SvU8IHaqPB7S49ZeGZwIquYn(mGgjbbNKGhpGEcZlETp7KjMrKa6R)taeq1KL68FJSOOfIyzR5b)BvjFZXGwEF3P9T9WlV73)fatH4q4ZssOqgubk)LOToGXzKgfWui0Qmy8x(netoYE1xRCd5k3byfqIlbXOmUltwYhG3MxZc6UuVimLKZpoRfMPmkGKOHcRMlZQtgpujJ6RLjPce5iveNVKZzYXPNwU4(hVd6GAz5lu5nS4s5lqnXjAUWIXnU4kAVlnPOvmx5bG1DXOcblUXHZPzqvYaiidiA3QiAdHZlRTueibOgvDRsYvSDDyxuEmPrq6UwxYLxkTVHeSiiSjTNJDXt5T3Bn0b9rO2viBJlb(XW86TXvV71cxslMyp6BVzUJUBUg0WFRPtKsqGTnOS)sfmrBWTOfw114YPZ6YksFUnFG240(doRxSYQfsRK)WhBs6HLSXdG4MJiYJw5QVHS0J7SUKhOpxqlPDxYhKB1U(OKsC(tGKq2Yd5PGv3ffW58sf9GJ29p2emgN0ihBtExl7Ux)yFhvfVz7B1kbomc7T5zGEGXZH0CQbpxRIHeYIsG7lI7AiApOM9wwCFZcatRFWzcpEIaPl2fHJd9oGIJLO6svQUqIQlmq0yi3wpYzvwsNRsZ5YsQbAMds4ZK9fWAaa)LmFBZnDqdXqqluC0)McQ16ck7XnBqn5utmambJ2hfcEc2zaNWUaCgATny(MBXqSnEFcbwW6WzOxoU3PtwdVKfks3sP5(zG0pf9qumX4KZ(V7zDM)IEwjporWEXaPzRbCMyENcMdgLMaW37zV8kwIrC75gh2bKFjunwJh1F08DheDNA(AeedEw6aOCWCGMRyJMN)5KGwTph)TSuicz3Zv7y198Me9msVbxlzvF7aPN2tysEyGRLazBUyAW3fF)KU3WYIndiPGnwpPLJqXtwP05BE6U08ei9bVduey(lI)k4WUbQPv5t0PnmyBRzLk8vm6JX0o)r5QMMj8H66YVG)H8G0URHvuaVO5RUEZSPURpGYtaLyH76FDFgKynrcER0xuDs9NCxJQkb1G7617R2cjl5UM(kYx3TjZi4h)m9lf34h5(E31bWbeNhHiFcxlz9x7FxTpimmUcBtyvULGaBKWxarZ13HKA)Jhn8sE(oVNVcvwqy78t88qy6LT5mC)kG4o9uVvpb0DHr6Ql3sknvFHHdbhBwAKn9s4uh9I41V0JoyD2)G7KyeXqMWLBSRi02)OgYZUE7i)TCuVZvGWIBhHsWW10BhXwxQ5un1X4gFnVk6wMkYCpmQ9VIDm10jJE2kuQJ7AUADiEKe5XSFzN(Bb35Gh8YL8N1fL))Q79IZQ7TbBmz)z1frNHL8Om2ZpHESEs(e6C6fmoffJZxhyvKYHrhSdY0Vsc)GTErJtGLRKrcQCUqxndSyS0klU7chKUnAhfYClJgjJ425a4wM637izu3(gfCKrCvZ4eFFWvndG0HREJP4stnNeq3MxkA7lLDQra7ppDWi)qwEokNuwAIuaFOsfuv8aO(K6dQ9bfUdtBYpfAuEClhOpTzh2b7vgfnkrw2tePb9ILeQhBQdB3SoG9oHqAkUeiq33d3EgAktXg9MAMZ4KYrLDgzZ9vi1ITpk6Jshi7nzAVsi0SnsxuQdCDuQ2(6E1bCoks0u)2yslt66qX5qgL7eIqAVun9izSqDmqpnjg0liDiCADlfwyjN9UDxuXUYrDOMoti3jlW2C9BvNNRKVTOQ7m0RvdxTI5d02Iv7j0PtpOfDYSJpTpbT8M0Di6pRvbZz9110w7U82tzyaPxmFbZ((6iZsBrb6gxzDgzc32N0KvpIXQ2S7RGhI8muR4L0dQR5e0D7lwqI4j7pZb41DWsqelPYA0uTJPl1C61M99ziddm4JScReI5Z1QqMxkKc2v9AyMqmKlQ(j597Ki3jh2rfSlvgyfF)g4hxq7yeugXnaWNpfZC2sLhjyr9HWajpeqJPPe2A9cs1iEnNwIJu6YczSaPdhYtelDWA8mv71l)AbWMVMwNYLTGk9jTD3kHgBivgNC(r9w0TF3wjiU)BNicTEVYZ)GCH)o2ZbJBOJLZf7eMOzdzI54QR8ZwE3ooYKmbtl5)9xO7oKbO4rzGzN2vxTUss5SZIujCqPTpsPM2w(YMYzf8iPPDEqo2wSM00t7AVI4H9B7NCAx7fapcs1ni1uszVjvTZinZcJVlQIZunlDes5zwZxVnTwDtzJoKaPsdL32OYqW4CF1MSRHP)YOaX1Vm(jtYE4)rKVJrSWRnMlN1y3NKMwcZvPzYM676)dH6oCaBdrZg4swk(J5GZ6OZcwGz9ZNMCl8LnNmhFw71hxVEvV15SHOZaNUqPJ02rO4)ENZH)8qJmZOMVT2axlD8ZmCZipf3QwLOLUIAgWXy)31DBPVR7w65Q5R88b)kHwI9OtlVusbXNqF3i7PnquhSaFzTsadV854trPlmZEJiSgvBrJVTh9nk)M7mgBo1pDixV)Sg5tQHQnF2h1jvIMzC)0kv7)d1(Kz)IdosAsYSheuIVl1Z3fg4lh2e3uMzpsNehNRNJZnDs75y)iOzpoN(oxj3bB((SZnhA6ITz35y2jDZnL)MtzGHSh2Ym3LoCl6AAO2rrRxcuhWn7r0KVlx2hIX40PXHRPzj2dRzAQ1OS1uhkfMHTgR8EHOJw2d4Py1YhsOB43gi(MerUXPxDjnRB8Yx)lyqkTFlGHYKU5swAQ36YQL9wPzFRrLPw)cPVU8bZ5iQDaMEwPDE4gtA969lmJWiyi0KrHY8Yj8EHPMJpBAXTDc4mmYk9Fpg(3PmvDwIIW(J7)5p]] )
 
