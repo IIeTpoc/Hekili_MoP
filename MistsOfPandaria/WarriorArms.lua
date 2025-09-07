@@ -2332,8 +2332,8 @@ local NewFeature = "|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0|
      if sw.mh_actual > 0 then sw.mh_projected = sw.mh_actual + sw.mh_speed end
      if sw.oh_actual > 0 then sw.oh_projected = sw.oh_actual + sw.oh_speed end
 
-     -- Rage/sec scales with weapon speed; recalc.
-     if spec.RefreshResources then spec:RefreshResources() end
+     -- TODO: Rage/sec scales with weapon speed; recalc.
+     -- if spec.RefreshResources then spec:RefreshResources() end
  end )
 
 -- State Expressions for MoP Arms Warrior
